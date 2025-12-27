@@ -1,0 +1,45 @@
+import numpy as np
+import pickle
+from keras.models import load_model
+
+class MadatinTranslator:
+    def __init__(self, model_dir="model"):
+        # Load metadata
+        with open(f"{model_dir}/metadata.pkl", "rb") as f:
+            data = pickle.load(f)
+
+        self.target_features_dict = data["target_features_dict"]
+        self.reverse_target_features_dict = data["reverse_target_features_dict"]
+        self.max_decoder_seq_length = data["max_decoder_seq_length"]
+        self.num_decoder_tokens = data["num_decoder_tokens"]
+
+        # Load models
+        self.encoder_model = load_model(f"{model_dir}/encoder_model.h5")
+        self.decoder_model = load_model(f"{model_dir}/decoder_model.h5")
+
+    def decode(self, test_input):
+        states_value = self.encoder_model.predict(test_input)
+
+        target_seq = np.zeros((1, 1, self.num_decoder_tokens))
+        target_seq[0, 0, self.target_features_dict['<START>']] = 1.
+
+        decoded_sentence = ""
+
+        while True:
+            output_tokens, h, c = self.decoder_model.predict([target_seq] + states_value)
+
+            sampled_index = np.argmax(output_tokens[0, -1, :])
+            sampled_token = self.reverse_target_features_dict[sampled_index]
+
+            if sampled_token == "<END>" or len(decoded_sentence) > self.max_decoder_seq_length:
+                break
+
+            decoded_sentence += sampled_token + " "
+
+            target_seq = np.zeros((1, 1, self.num_decoder_tokens))
+            target_seq[0, 0, sampled_index] = 1.
+
+            states_value = [h, c]
+
+        return decoded_sentence.strip()
+
