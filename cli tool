@@ -1,0 +1,19 @@
+import click
+import numpy as np
+from .inference import MadatinTranslator
+
+@click.command()
+@click.argument("sentence")
+def translate(sentence):
+    translator = MadatinTranslator()
+
+    # Convert sentence → encoder_input_data format
+    # (You already have this logic in your training script)
+    test_input = your_vectorize_function(sentence)
+
+    output = translator.decode(test_input)
+    click.echo(output)
+
+if __name__ == "__main__":
+    translate()
+
